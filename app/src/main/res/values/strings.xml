@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">listacompra</string>
+    <string name="default_web_client_id" translatable="false">17999796995-p97d045b7o9b1jai4esdd7jhbdetc4ei.apps.googleusercontent.com</string>
 </resources>
