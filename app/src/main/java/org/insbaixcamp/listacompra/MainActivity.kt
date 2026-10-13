@@ -1,6 +1,8 @@
 package org.insbaixcamp.listacompra
 
 import android.os.Bundle
+import android.widget.Button
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,16 +15,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
 import org.insbaixcamp.listacompra.ui.theme.ListacompraTheme
 
 class MainActivity : ComponentActivity() {
-    private lateinit var auth: FirebaseAuth
+    private lateinit var autenticacion: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        auth = FirebaseAuth.getInstance()
+        autenticacion = FirebaseAuth.getInstance()
         enableEdgeToEdge()
         setContent {
             ListacompraTheme {
@@ -30,48 +33,43 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AuthWrapper(auth = auth)
+                    var usuarioActual by remember { mutableStateOf(autenticacion.currentUser) }
+
+                    DisposableEffect(autenticacion) {
+                        val oyente = FirebaseAuth.AuthStateListener { authFirebase ->
+                            usuarioActual = authFirebase.currentUser
+                        }
+                        autenticacion.addAuthStateListener(oyente)
+                        onDispose {
+                            autenticacion.removeAuthStateListener(oyente)
+                        }
+                    }
+
+                    if (usuarioActual == null) {
+                        LoginScreen(autenticacion = autenticacion)
+                    } else {
+                        ContenidoPrincipalApp(autenticacion = autenticacion)
+                    }
                 }
             }
         }
     }
 }
 
-@Composable
-fun AuthWrapper(auth: FirebaseAuth) {
-    var currentUser by remember { mutableStateOf(auth.currentUser) }
-
-    DisposableEffect(auth) {
-        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-            currentUser = firebaseAuth.currentUser
-        }
-        auth.addAuthStateListener(listener)
-        onDispose {
-            auth.removeAuthStateListener(listener)
-        }
-    }
-
-    if (currentUser == null) {
-        LoginScreen(auth = auth)
-    } else {
-        HomeScreen(auth = auth)
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(auth: FirebaseAuth) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val userEmail = auth.currentUser?.email ?: "Usuario"
+fun ContenidoPrincipalApp(autenticacion: FirebaseAuth) {
+    val estadoMenu = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val ambito = rememberCoroutineScope()
+    val correoUsuario = autenticacion.currentUser?.email ?: "Usuario"
 
     ModalNavigationDrawer(
-        drawerState = drawerState,
+        drawerState = estadoMenu,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = userEmail,
+                    text = correoUsuario,
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -81,8 +79,8 @@ fun HomeScreen(auth: FirebaseAuth) {
                     label = { Text("Cerrar sesión") },
                     selected = false,
                     onClick = {
-                        scope.launch { drawerState.close() }
-                        auth.signOut()
+                        ambito.launch { estadoMenu.close() }
+                        autenticacion.signOut()
                     },
                     icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Cerrar sesión") },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -96,8 +94,8 @@ fun HomeScreen(auth: FirebaseAuth) {
                     title = { Text("Lista de Compra") },
                     navigationIcon = {
                         IconButton(onClick = {
-                            scope.launch {
-                                if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                            ambito.launch {
+                                if (estadoMenu.isClosed) estadoMenu.open() else estadoMenu.close()
                             }
                         }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menú")
@@ -105,14 +103,22 @@ fun HomeScreen(auth: FirebaseAuth) {
                     }
                 )
             }
-        ) { innerPadding ->
+        ) { rellenoInterno ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(rellenoInterno),
                 contentAlignment = Alignment.Center
             ) {
-                // Pantalla principal
+                var num by remember { mutableStateOf(1) }
+                Button(
+                    onClick = {
+                        num++,
+
+                    })
+                {
+                    Text("Generar Lista")
+                }
             }
         }
     }
