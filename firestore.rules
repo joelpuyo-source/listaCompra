@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /products/{product} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /categories/{category} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

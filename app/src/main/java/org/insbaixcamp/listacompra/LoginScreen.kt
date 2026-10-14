@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -24,10 +25,11 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
     var contrasena by remember { mutableStateOf("") }
     var cargando by remember { mutableStateOf(false) }
     val contexto = LocalContext.current
+    val idClienteWeb = stringResource(R.string.default_web_client_id)
 
-    val clienteInicioSesionGoogle = remember {
+    val clienteInicioSesionGoogle = remember(idClienteWeb) {
         val opciones = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(contexto.getString(R.string.default_web_client_id))
+            .requestIdToken(idClienteWeb)
             .requestEmail()
             .build()
         GoogleSignIn.getClient(contexto, opciones)
