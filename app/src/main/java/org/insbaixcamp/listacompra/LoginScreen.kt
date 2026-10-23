@@ -24,10 +24,11 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
     var correo by remember { mutableStateOf("") }
     var contrasena by remember { mutableStateOf("") }
     var cargando by remember { mutableStateOf(false) }
+
     val contexto = LocalContext.current
     val idClienteWeb = stringResource(R.string.default_web_client_id)
 
-    val clienteInicioSesionGoogle = remember(idClienteWeb) {
+    val clienteGoogle = remember(idClienteWeb) {
         val opciones = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(idClienteWeb)
             .requestEmail()
@@ -35,23 +36,25 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
         GoogleSignIn.getClient(contexto, opciones)
     }
 
-    val lanzador = rememberLauncherForActivityResult(
+    val lanzadorActividad = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
-    ) { resultado ->
-        val tarea = GoogleSignIn.getSignedInAccountFromIntent(resultado.data)
+    ) { resultadoActividad ->
+        val tareaCuenta = GoogleSignIn.getSignedInAccountFromIntent(resultadoActividad.data)
         try {
-            val cuenta = tarea.getResult(Exception::class.java)
-            val tokenIdentidad = cuenta?.idToken
-            if (tokenIdentidad != null) {
+            val cuentaGoogle = tareaCuenta.getResult(Exception::class.java)
+            val tokenGoogle = cuentaGoogle?.idToken
+
+            if (tokenGoogle != null) {
                 cargando = true
-                val credencial = GoogleAuthProvider.getCredential(tokenIdentidad, null)
-                autenticacion.signInWithCredential(credencial)
-                    .addOnCompleteListener { tareaAuth ->
+                val credencialFirebase = GoogleAuthProvider.getCredential(tokenGoogle, null)
+
+                autenticacion.signInWithCredential(credencialFirebase)
+                    .addOnCompleteListener { tareaAutenticacion ->
                         cargando = false
-                        if (tareaAuth.isSuccessful) {
+                        if (tareaAutenticacion.isSuccessful) {
                             Toast.makeText(contexto, "¡Sesión iniciada con Google!", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(contexto, "Error Firebase: ${tareaAuth.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(contexto, "Error Firebase: ${tareaAutenticacion.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
                         }
                     }
             } else {
@@ -79,7 +82,8 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
             value = correo,
             onValueChange = { correo = it },
             label = { Text("Correo electrónico") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -90,7 +94,8 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -106,17 +111,17 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
                     }
                     cargando = true
                     autenticacion.signInWithEmailAndPassword(correo, contrasena)
-                        .addOnCompleteListener { tarea ->
+                        .addOnCompleteListener { tareaLogin ->
                             cargando = false
-                            if (tarea.isSuccessful) {
+                            if (tareaLogin.isSuccessful) {
                                 Toast.makeText(contexto, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
                             } else {
                                 autenticacion.createUserWithEmailAndPassword(correo, contrasena)
-                                    .addOnCompleteListener { tareaRegistro ->
-                                        if (tareaRegistro.isSuccessful) {
+                                    .addOnCompleteListener { tareaRegistroUsuario ->
+                                        if (tareaRegistroUsuario.isSuccessful) {
                                             Toast.makeText(contexto, "Cuenta creada y conectada", Toast.LENGTH_SHORT).show()
                                         } else {
-                                            Toast.makeText(contexto, "Error: ${tareaRegistro.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(contexto, "Error: ${tareaRegistroUsuario.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
                                         }
                                     }
                             }
@@ -124,16 +129,16 @@ fun LoginScreen(autenticacion: FirebaseAuth) {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Iniciar Sesión / Registrarse con Correo")
+                Text("Iniciar Sesión / Registrarse")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
                 onClick = {
-                    clienteInicioSesionGoogle.signOut().addOnCompleteListener {
-                        val intencionInicioSesion = clienteInicioSesionGoogle.signInIntent
-                        lanzador.launch(intencionInicioSesion)
+                    clienteGoogle.signOut().addOnCompleteListener {
+                        val intencionLogin = clienteGoogle.signInIntent
+                        lanzadorActividad.launch(intencionLogin)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()

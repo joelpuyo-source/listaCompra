@@ -10,20 +10,34 @@ import com.google.firebase.auth.FirebaseAuth
 import org.insbaixcamp.listacompra.ui.theme.ListacompraTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         MobileAds.initialize(this)
         enableEdgeToEdge()
-        val auth = FirebaseAuth.getInstance()
+        
+        val autenticacion = FirebaseAuth.getInstance()
+
         setContent {
             ListacompraTheme {
-                var usuario by remember { mutableStateOf(auth.currentUser) }
-                DisposableEffect(auth) {
-                    val listener = FirebaseAuth.AuthStateListener { usuario = it.currentUser }
-                    auth.addAuthStateListener(listener)
-                    onDispose { auth.removeAuthStateListener(listener) }
+                var usuarioActual by remember { mutableStateOf(autenticacion.currentUser) }
+
+                DisposableEffect(autenticacion) {
+                    val oyente = FirebaseAuth.AuthStateListener { 
+                        usuarioActual = it.currentUser 
+                    }
+                    autenticacion.addAuthStateListener(oyente)
+                    onDispose { 
+                        autenticacion.removeAuthStateListener(oyente) 
+                    }
                 }
-                if (usuario == null) LoginScreen(auth) else CompraApp(auth)
+
+                if (usuarioActual == null) {
+                    LoginScreen(autenticacion)
+                } else {
+                    CompraApp(autenticacion)
+                }
             }
         }
     }

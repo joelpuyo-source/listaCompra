@@ -5,47 +5,147 @@ import org.json.JSONArray
 import org.json.JSONObject
 import androidx.core.content.edit
 
-// Datos sencillos que usamos en la aplicacion.
-data class Compra(val nombre: String, val categoria: String, val precio: Double, val cantidad: Int = 1, val marcada: Boolean = false)
-data class ListaGuardada(val fecha: Long, val productos: List<Compra>, val nombre: String = "Compra")
-data class ListaUsuario(val nombre: String, val productos: List<Compra> = emptyList(), val creada: Long = System.currentTimeMillis())
+data class Compra(
+    val nombre: String,
+    val categoria: String,
+    val precio: Double,
+    val cantidad: Int = 1,
+    val marcada: Boolean = false
+)
+
+data class ListaGuardada(
+    val fecha: Long,
+    val productos: List<Compra>,
+    val nombre: String = "Compra"
+)
+
+data class ListaUsuario(
+    val nombre: String,
+    val productos: List<Compra> = emptyList(),
+    val creada: Long = System.currentTimeMillis()
+)
 
 fun guardarListas(contexto: Context, listas: List<ListaUsuario>) {
-    contexto.getSharedPreferences("app", 0).edit { putString("listas", JSONArray().also { a ->
-        listas.forEach { l -> a.put(JSONObject().put("nombreLista", l.nombre).put("creada", l.creada).put("productos", JSONArray().also { p ->
-            l.productos.forEach { p.put(JSONObject().put("nombre", it.nombre).put("categoria", it.categoria).put("precio", it.precio).put("cantidad", it.cantidad).put("marcada", it.marcada)) }
-        })) }
-    }.toString()) }
+    val arregloJson = JSONArray()
+
+    listas.forEach { lista ->
+        val objetoLista = JSONObject().apply {
+            put("nombreLista", lista.nombre)
+            put("creada", lista.creada)
+            put("productos", JSONArray().apply {
+                lista.productos.forEach { producto ->
+                    put(JSONObject().apply {
+                        put("nombre", producto.nombre)
+                        put("categoria", producto.categoria)
+                        put("precio", producto.precio)
+                        put("cantidad", producto.cantidad)
+                        put("marcada", producto.marcada)
+                    })
+                }
+            })
+        }
+        arregloJson.put(objetoLista)
+    }
+
+    contexto.getSharedPreferences("app", Context.MODE_PRIVATE).edit {
+        putString("listas", arregloJson.toString())
+    }
 }
 
 fun leerListas(contexto: Context): List<ListaUsuario> = try {
-    val a = JSONArray(contexto.getSharedPreferences("app", 0).getString("listas", "[]"))
-    List(a.length()) { i -> a.getJSONObject(i).let { l ->
-        val p = l.getJSONArray("productos")
-        ListaUsuario(l.getString("nombreLista"), List(p.length()) { n -> p.getJSONObject(n).let { Compra(it.getString("nombre"), it.getString("categoria"), it.getDouble("precio"), it.getInt("cantidad"), it.optBoolean("marcada")) } }, l.optLong("creada", System.currentTimeMillis()))
-    } }
-} catch (_: Exception) { emptyList() }
+    val cadenaJson = contexto.getSharedPreferences("app", Context.MODE_PRIVATE).getString("listas", "[]")
+    val arregloJson = JSONArray(cadenaJson)
+
+    List(arregloJson.length()) { indice ->
+        val objetoJson = arregloJson.getJSONObject(indice)
+        val arregloProductos = objetoJson.getJSONArray("productos")
+
+        val productos = List(arregloProductos.length()) { indiceProducto ->
+            val objetoProducto = arregloProductos.getJSONObject(indiceProducto)
+            Compra(
+                nombre = objetoProducto.getString("nombre"),
+                categoria = objetoProducto.getString("categoria"),
+                precio = objetoProducto.getDouble("precio"),
+                cantidad = objetoProducto.getInt("cantidad"),
+                marcada = objetoProducto.optBoolean("marcada", false)
+            )
+        }
+
+        ListaUsuario(
+            nombre = objetoJson.getString("nombreLista"),
+            productos = productos,
+            creada = objetoJson.optLong("creada", System.currentTimeMillis())
+        )
+    }
+} catch (_: Exception) {
+    emptyList()
+}
 
 fun guardarHistorial(contexto: Context, historial: List<ListaGuardada>) {
-    val json = JSONArray()
-    historial.forEach { l -> json.put(JSONObject().put("nombre", l.nombre).put("fecha", l.fecha).put("productos", JSONArray().also { a -> l.productos.forEach { a.put(JSONObject().put("nombre", it.nombre).put("categoria", it.categoria).put("precio", it.precio).put("cantidad", it.cantidad)) } })) }
-    contexto.getSharedPreferences("app", 0).edit { putString("historial", json.toString()) }
+    val arregloJson = JSONArray()
+
+    historial.forEach { lista ->
+        val objetoLista = JSONObject().apply {
+            put("nombre", lista.nombre)
+            put("fecha", lista.fecha)
+            put("productos", JSONArray().apply {
+                lista.productos.forEach { producto ->
+                    put(JSONObject().apply {
+                        put("nombre", producto.nombre)
+                        put("categoria", producto.categoria)
+                        put("precio", producto.precio)
+                        put("cantidad", producto.cantidad)
+                    })
+                }
+            })
+        }
+        arregloJson.put(objetoLista)
+    }
+
+    contexto.getSharedPreferences("app", Context.MODE_PRIVATE).edit {
+        putString("historial", arregloJson.toString())
+    }
 }
 
 fun leerHistorial(contexto: Context): List<ListaGuardada> = try {
-    val json = JSONArray(contexto.getSharedPreferences("app", 0).getString("historial", "[]"))
-    List(json.length()) { i -> json.getJSONObject(i).let { l ->
-        val productos = l.getJSONArray("productos")
-        ListaGuardada(l.getLong("fecha"), List(productos.length()) { n -> productos.getJSONObject(n).let { Compra(it.getString("nombre"), it.getString("categoria"), it.getDouble("precio"), it.getInt("cantidad")) } }, l.optString("nombre", "Compra"))
-    } }
-} catch (_: Exception) { emptyList() }
+    val cadenaJson = contexto.getSharedPreferences("app", Context.MODE_PRIVATE).getString("historial", "[]")
+    val arregloJson = JSONArray(cadenaJson)
+
+    List(arregloJson.length()) { indice ->
+        val objetoJson = arregloJson.getJSONObject(indice)
+        val arregloProductos = objetoJson.getJSONArray("productos")
+
+        val productos = List(arregloProductos.length()) { indiceProducto ->
+            val objetoProducto = arregloProductos.getJSONObject(indiceProducto)
+            Compra(
+                nombre = objetoProducto.getString("nombre"),
+                categoria = objetoProducto.getString("categoria"),
+                precio = objetoProducto.getDouble("precio"),
+                cantidad = objetoProducto.getInt("cantidad")
+            )
+        }
+
+        ListaGuardada(
+            fecha = objetoJson.getLong("fecha"),
+            productos = productos,
+            nombre = objetoJson.optString("nombre", "Compra")
+        )
+    }
+} catch (_: Exception) {
+    emptyList()
+}
 
 fun archivarListasCaducadas(contexto: Context) {
-    val ahora = System.currentTimeMillis()
+    val tiempoActual = System.currentTimeMillis()
     val listas = leerListas(contexto)
-    val caducadas = listas.filter { ahora - it.creada >= 72 * 60 * 60 * 1000L }
+    val caducadas = listas.filter { tiempoActual - it.creada >= 72 * 60 * 60 * 1000L }
+
     if (caducadas.isNotEmpty()) {
-        guardarHistorial(contexto, leerHistorial(contexto) + caducadas.map { ListaGuardada(it.creada, it.productos, it.nombre) })
+        val historialActual = leerHistorial(contexto)
+        val nuevasGuardadas = caducadas.map {
+            ListaGuardada(fecha = it.creada, productos = it.productos, nombre = it.nombre)
+        }
+        guardarHistorial(contexto, nuevasGuardadas + historialActual)
         guardarListas(contexto, listas - caducadas.toSet())
     }
 }

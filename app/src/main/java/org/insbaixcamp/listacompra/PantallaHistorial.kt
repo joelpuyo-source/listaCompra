@@ -10,22 +10,73 @@ import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
-// Aqui se ven las compras guardadas.
 @Composable
-fun PantallaHistorial(historial: List<ListaGuardada>, cargando: Boolean, error: String) {
-    val locale = LocalLocale.current.platformLocale
-    if (cargando) CircularProgressIndicator()
-    if (error.isNotEmpty()) Text(error)
-    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 600.dp)) {
-        items(historial) { lista ->
-            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Column(Modifier.padding(12.dp)) {
-                    Text(lista.nombre, style = MaterialTheme.typography.titleMedium)
-                    Text(SimpleDateFormat("dd/MM/yyyy", locale).format(Date(lista.fecha)))
-                    lista.productos.forEach { Text("${it.nombre} × ${it.cantidad} — ${it.precio * it.cantidad} €") }
-                    Text("Total: ${lista.productos.sumOf { it.precio * it.cantidad }} €")
+fun PantallaHistorial(
+    historial: List<ListaGuardada>,
+    cargando: Boolean,
+    error: String
+) {
+    val localizacion = LocalLocale.current.platformLocale
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (cargando) {
+            CircularProgressIndicator()
+        }
+
+        if (error.isNotEmpty()) {
+            Text(text = error, color = MaterialTheme.colorScheme.error)
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 600.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(historial) { lista ->
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = lista.nombre,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Text(
+                            text = SimpleDateFormat("dd/MM/yyyy", localizacion).format(Date(lista.fecha)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        lista.productos.forEach { producto ->
+                            Text(
+                                text = "${producto.nombre} × ${producto.cantidad} — ${"%.2f".format(producto.precio * producto.cantidad)} €",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        val precioTotalLista = lista.productos.sumOf { it.precio * it.cantidad }
+                        Text(
+                            text = "Total: ${"%.2f".format(precioTotalLista)} €",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
                 }
             }
         }

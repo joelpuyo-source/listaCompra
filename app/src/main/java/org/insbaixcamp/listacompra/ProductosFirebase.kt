@@ -2,27 +2,48 @@ package org.insbaixcamp.listacompra
 
 import com.google.firebase.firestore.FirebaseFirestore
 
-data class Producto(val nombre: String, val categoria: String, val precio: Double)
+data class Producto(
+    val nombre: String,
+    val categoria: String,
+    val precio: Double
+)
 
 object ProductosFirebase {
-    private fun categoria(dato: Map<*, *>): String =
-        ((dato["categories"] as? List<*>)?.firstOrNull() as? Map<*, *>)?.let { categoria(it) }
-            ?: dato["name"]?.toString().orEmpty()
+
+    private fun extraerCategoria(dato: Map<*, *>): String {
+        val mapaCategoria = (dato["categories"] as? List<*>)?.firstOrNull() as? Map<*, *>
+        return mapaCategoria?.let { extraerCategoria(it) } ?: dato["name"]?.toString().orEmpty()
+    }
 
     fun cargar(ok: (List<Producto>) -> Unit, error: (Exception) -> Unit) {
-        FirebaseFirestore.getInstance().collection("products").get()
-            .addOnSuccessListener { docs ->
-                FirebaseFirestore.getInstance().collection("categories").get()
+        val baseDatos = FirebaseFirestore.getInstance()
+
+        baseDatos.collection("products").get()
+            .addOnSuccessListener { documentosProductos ->
+                baseDatos.collection("categories").get()
                     .addOnSuccessListener { categorias ->
-                        val nombres = categorias.associate { it.id to it.getString("name").orEmpty() }
-                        ok(docs.mapNotNull { d ->
-                            val precios = d.get("price_instructions") as? Map<*, *> ?: emptyMap<Any, Any>()
-                            val precio = (precios["bulk_price"] ?: precios["unit_price"])?.toString()?.toDoubleOrNull() ?: return@mapNotNull null
-                            val categoria = (d.get("categories") as? List<*>)?.firstOrNull() as? Map<*, *>
-                            Producto(d.getString("display_name") ?: d.getString("name") ?: d.id,
-                                categoria?.let { categoria(it) }?.ifBlank { null } ?: "Otros", precio)
-                        })
-                    }.addOnFailureListener(error)
-            }.addOnFailureListener(error)
+                        val productosCargados = documentosProductos.mapNotNull { documentoProducto ->
+                            val datosPrecios = documentoProducto.get("price_instructions") as? Map<*, *> ?: emptyMap<Any, Any>()
+                            val precioTexto = datosPrecios["bulk_price"] ?: datosPrecios["unit_price"]
+                            val precio = precioTexto?.toString()?.toDoubleOrNull() ?: return@mapNotNull null
+
+                            val mapaCategoria = (documentoProducto.get("categories") as? List<*>)?.firstOrNull() as? Map<*, *>
+                            val categoriaNombre = mapaCategoria?.let { extraerCategoria(it) }?.ifBlank { null } ?: "Otros"
+
+                            val productoNombre = documentoProducto.getString("display_name") 
+                                ?: documentoProducto.getString("name") 
+                                ?: documentoProducto.id
+
+                            Producto(
+                                nombre = productoNombre,
+                                categoria = categoriaNombre,
+                                precio = precio
+                            )
+                        }
+                        ok(productosCargados)
+                    }
+                    .addOnFailureListener(error)
+            }
+            .addOnFailureListener(error)
     }
 }
